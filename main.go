@@ -7,7 +7,6 @@ import (
 	"os"
 	"regexp"
 	"sort"
-	"strconv"
 	"text/tabwriter"
 	"time"
 
@@ -16,35 +15,22 @@ import (
 
 type Event struct {
 	Summary      string
-	Frequency    string
-	Interval     int64
-	Until        string
-	TimesPerYear int64
+	TimesPerYear int
 	Rrule        map[string]string
 }
 
-var freqs = map[string]int64{
-	"YEARLY":  1,
-	"MONTHLY": 12,
-	"WEEKLY":  52,
-	"DAILY":   365,
-}
+type ByTimesPerYear []Event
 
-type ByFrequency []Event
-
-func (e ByFrequency) Less(i, j int) bool {
+func (e ByTimesPerYear) Less(i, j int) bool {
 	a, b := e[i], e[j]
 	if a.TimesPerYear != b.TimesPerYear {
 		return a.TimesPerYear < b.TimesPerYear
 	}
-	if a.Summary != b.Summary {
-		return a.Summary < b.Summary
-	}
-	return a.Until < b.Until
+	return a.Summary < b.Summary
 }
 
-func (e ByFrequency) Len() int      { return len(e) }
-func (e ByFrequency) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
+func (e ByTimesPerYear) Len() int      { return len(e) }
+func (e ByTimesPerYear) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
 
 func main() {
 	var (
@@ -75,6 +61,7 @@ func main() {
 		}
 	}
 
+	// clean out emojis and such for tabwriter not to bug out
 	reg, err := regexp.Compile("[^a-zA-Z0-9 /\\[\\]]+")
 	if err != nil {
 		log.Fatal(err)
@@ -82,28 +69,17 @@ func main() {
 
 	var events []Event
 	for _, ev := range recurringEvents {
-		i := int64(1)
-		intervalStr := ev.RecurrenceRule["INTERVAL"]
-		if intervalStr != "" {
-			i, err = strconv.ParseInt(intervalStr, 10, 64)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
 		events = append(events, Event{
 			Summary:      reg.ReplaceAllString(ev.Summary, ""),
 			Rrule:        ev.RecurrenceRule,
-			Frequency:    ev.RecurrenceRule["FREQ"],
-			Interval:     i,
-			Until:        ev.RecurrenceRule["UNTIL"],
-			TimesPerYear: int64(freq[ev.Summary]),
+			TimesPerYear: freq[ev.Summary],
 		})
 	}
-	sort.Sort(ByFrequency(events))
+	sort.Sort(ByTimesPerYear(events))
 
 	minwidth := 30
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 1, ' ', 0)
-	fmt.Fprintln(w, "Name\tFrequency\tRRULE\t")
+	fmt.Fprintln(w, "Name\\# of Times\tRRULE\t")
 	for _, e := range events {
 		title := e.Summary
 		if len(e.Summary) > minwidth {
