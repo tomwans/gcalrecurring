@@ -34,6 +34,7 @@ func (e ByTimesPerYear) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
 
 func main() {
 	var (
+		fMinwidth    = flag.Int("min-width", 42, "Minimum width of the title column")
 		fICSFilepath = flag.String("ics-filepath", "", "Path to the ICS File to parse")
 	)
 	flag.Parse()
@@ -62,7 +63,7 @@ func main() {
 	}
 
 	// clean out emojis and such for tabwriter not to bug out
-	reg, err := regexp.Compile("[^a-zA-Z0-9 /\\[\\]]+")
+	reg, err := regexp.Compile("[[:^ascii:]]")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,7 +78,7 @@ func main() {
 	}
 	sort.Sort(ByTimesPerYear(events))
 
-	minwidth := 30
+	minwidth := *fMinwidth
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 1, ' ', 0)
 	fmt.Fprintln(w, "Name\t# of times\tRRULE\t")
 	for _, e := range events {
