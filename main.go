@@ -79,7 +79,7 @@ func main() {
 
 	minwidth := 30
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 1, ' ', 0)
-	fmt.Fprintln(w, "Name\\# of Times\tRRULE\t")
+	fmt.Fprintln(w, "Name\t# of times\tRRULE\t")
 	for _, e := range events {
 		title := e.Summary
 		if len(e.Summary) > minwidth {
